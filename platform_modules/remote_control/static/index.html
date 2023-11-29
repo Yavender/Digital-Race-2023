@@ -1,0 +1,132 @@
+<html>
+
+<head>
+	<meta charset="utf-8">
+	<!-- <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0"> -->
+	<meta name="viewport" content="width=device-width, initial-scale=1.0,  minimum-scale=1.0">
+
+	<link rel="stylesheet" href="../styles.css">
+
+</head>
+
+<body>
+	<div id="menubar">
+		<button id="btn-fullscr">
+			FullScr
+		</button>
+		<button id="btn-reload" onclick="location.reload()">
+			Reload
+		</button>
+		<button id="btn-record-video">
+			Record Video
+		</button>
+		<button id="btn-emergency-stop" style="background: #ff5400; color: #fff;">
+			Emergency Stop
+		</button>
+		<div id="info">
+			<span id="result"></span>
+		</div>
+	</div>
+	<div id="container">
+		<div id="speed-control">SPEED CONTROL ⇅</div>
+		<div id="angle-control">ANGLE CONTROL ⇄</div>
+		<div id="vertline"></div>
+	</div>
+	<script src="../virtualjoystick.js"></script>
+	<script>
+
+		// Global control variables
+		var recordVideo = false;
+		var emergencyStop = false;
+
+		console.log("touchscreen is", VirtualJoystick.touchScreenAvailable() ? "available" : "not available");
+
+		var joystick1 = new VirtualJoystick({
+			container: document.getElementById('container'),
+			strokeStyle: '#cc0000',
+			limitStickTravel: false,
+			stickRadius: 80,
+			mouseSupport: true,
+		});
+		joystick1.addEventListener('touchStartValidation', function (event) {
+			var touch = event.changedTouches[0];
+			if (touch.pageX >= window.innerWidth / 2) return false;
+			return true
+		});
+		joystick1.addEventListener('touchStart', function () {
+			console.log('fire')
+		})
+
+
+		var joystick2 = new VirtualJoystick({
+			container: document.getElementById('container'),
+			strokeStyle: '#197db7',
+			limitStickTravel: false,
+			stickRadius: 80,
+			mouseSupport: true,
+		});
+		joystick2.addEventListener('touchStartValidation', function (event) {
+			var touch = event.changedTouches[0];
+			if (touch.pageX < window.innerWidth / 2) return false;
+			return true
+		});
+
+		function initNewSocket() {
+			return new WebSocket("ws://" + document.domain + ":5000/control");
+		}
+		var socket = initNewSocket()
+		socket.onopen = () => {
+			setInterval(function () {
+				var outputEl = document.getElementById('result');
+				let speed = -joystick1.deltaY();
+				let steer = joystick2.deltaX();
+				outputEl.innerHTML = '<b>Speed:</b> ' + speed + ' <b>Angle:</b> ' + steer;
+				socket.send(JSON.stringify({"speed": speed, "steer": steer, "record_videos": recordVideo, "emergency_stop": emergencyStop}));
+			}, 1 / 30 * 1000);
+
+			// Record video
+			document.getElementById("btn-record-video").addEventListener("click", function () {
+				recordVideo = !recordVideo;
+				if (recordVideo) {
+					document.getElementById("btn-record-video").classList.add("recording");
+					document.getElementById("btn-record-video").innerHTML = "Recording..."
+				} else {
+					document.getElementById("btn-record-video").classList.remove("recording");
+					document.getElementById("btn-record-video").innerHTML = "Record Video"
+				}
+			}, false);
+
+			// Emergency stop
+			document.getElementById("btn-emergency-stop").addEventListener("click", function () {
+				socket.send(JSON.stringify({"speed": 0, "steer": 0, "record_videos": false, "emergency_stop": true}));
+			}, false);
+
+		};
+
+
+		function toggleFullScreen() {
+			var doc = window.document;
+			var docEl = doc.documentElement;
+
+			var requestFullScreen = docEl.requestFullscreen || docEl.mozRequestFullScreen || docEl.webkitRequestFullScreen ||
+				docEl.msRequestFullscreen;
+			var cancelFullScreen = doc.exitFullscreen || doc.mozCancelFullScreen || doc.webkitExitFullscreen || doc
+				.msExitFullscreen;
+
+			if (!doc.fullscreenElement && !doc.mozFullScreenElement && !doc.webkitFullscreenElement && !doc
+				.msFullscreenElement) {
+				requestFullScreen.call(docEl);
+			} else {
+				cancelFullScreen.call(doc);
+			}
+		}
+
+		// UI
+		var goFS = document.getElementById("btn-fullscr");
+		goFS.addEventListener("click", function () {
+			toggleFullScreen();
+		}, false);
+	</script>
+</body>
+
+</html>margin

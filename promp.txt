@@ -1,0 +1,1 @@
+python demo\ONNXRuntime\onnx_inference.py -m yolox_nano.onnx -i image22.jpg -o demo -s 0.3 --input_shape 416,416
